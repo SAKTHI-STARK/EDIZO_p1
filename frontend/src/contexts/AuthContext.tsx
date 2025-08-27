@@ -6,6 +6,7 @@ interface AuthContextType extends AuthState {
   register: (userData: Omit<User, "id" | "createdAt">) => Promise<void>;
   logout: () => void;
   updateProfile: (userData: Partial<User>) => Promise<void>;
+  fetchProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -18,11 +19,9 @@ export const useAuth = () => {
   return context;
 };
 
-const API_BASE_URL = "http://localhost:8000/api"; // Express backend
+const API_BASE_URL = "http://localhost:8000/api"; // 🔗 Your backend
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [authState, setAuthState] = useState<AuthState>({
     isAuthenticated: false,
     user: null,
@@ -51,8 +50,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   /** 🔑 LOGIN */
   const login = async (email: string, password: string) => {
     try {
-      console.log("🔑 Logging in with:", { email, password });
-
       const res = await fetch(`${API_BASE_URL}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -60,13 +57,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       });
 
       const data = await res.json();
-      console.log("📥 Login response:", data);
-
       if (!res.ok || !data.success) {
         throw new Error(data.message || "Invalid email or password");
       }
 
-      // Save token + user in localStorage
       localStorage.setItem("redcap_token", data.token);
       localStorage.setItem("redcap_user", JSON.stringify(data.user));
 
@@ -76,16 +70,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         loading: false,
       });
     } catch (err: any) {
-      console.error("❌ Login failed:", err);
       setAuthState((prev) => ({ ...prev, loading: false }));
       throw err;
     }
   };
 
   /** 📝 REGISTER */
-  const register = async (
-    userData: Omit<User, "id" | "createdAt">
-  ): Promise<void> => {
+  const register = async (userData: Omit<User, "id" | "createdAt">): Promise<void> => {
     setAuthState((prev) => ({ ...prev, loading: true }));
     try {
       const res = await fetch(`${API_BASE_URL}/register`, {
@@ -100,13 +91,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         throw new Error(data.message || "Registration failed");
       }
 
-      // Save token + user
       localStorage.setItem("redcap_token", data.token);
       localStorage.setItem("redcap_user", JSON.stringify(data.user));
 
       setAuthState({ isAuthenticated: true, user: data.user, loading: false });
     } catch (err) {
-      console.error("Register error:", err);
       setAuthState((prev) => ({ ...prev, loading: false }));
       throw err;
     }
@@ -144,8 +133,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         loading: false,
       });
     } catch (err) {
-      console.error("Update profile error:", err);
       setAuthState((prev) => ({ ...prev, loading: false }));
+    }
+  };
+
+  /** 🔄 FETCH USER PROFILE */
+  const fetchProfile = async (): Promise<void> => {
+    try {
+      const token = localStorage.getItem("redcap_token");
+      if (!token) return;
+
+      const res = await fetch(`${API_BASE_URL}/profile`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) throw new Error("Failed to fetch profile");
+      const data = await res.json();
+
+      localStorage.setItem("redcap_user", JSON.stringify(data));
+      setAuthState({ isAuthenticated: true, user: data, loading: false });
+    } catch (err) {
+      console.error("❌ Fetch profile failed:", err);
     }
   };
 
@@ -155,6 +164,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     register,
     logout,
     updateProfile,
+    fetchProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -11,7 +11,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ onBack }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    name: user?.name || '',
+    name: user?.fullName || '',
     email: user?.email || '',
     phone: user?.phone || '',
     doorNumber: user?.doorNumber || '',
@@ -119,7 +119,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ onBack }) => {
 
   const handleCancel = () => {
     setFormData({
-      name: user?.name || '',
+      name: user?.fullName || '',
       email: user?.email || '',
       phone: user?.phone || '',
       doorNumber: user?.doorNumber || '',
@@ -155,7 +155,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ onBack }) => {
                   <User className="h-8 w-8 text-red-500" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-white">{user?.name}</h1>
+                  <h1 className="text-2xl font-bold text-white">{user?.fullName}</h1>
                   <p className="text-red-100">Member since {user?.createdAt ? new Date(user.createdAt).getFullYear() : '2025'}</p>
                 </div>
               </div>
@@ -214,7 +214,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ onBack }) => {
                       }`}
                     />
                   ) : (
-                    <p className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">{user?.name}</p>
+                    <p className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">{user?.fullName}</p>
                   )}
                   {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
                 </div>

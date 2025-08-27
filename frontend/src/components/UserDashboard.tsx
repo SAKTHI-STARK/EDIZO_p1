@@ -61,7 +61,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onStartBooking, onTrackPa
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-                Welcome back, {user?.name}! 👋
+                Welcome back, {user?.fullName}! 👋
               </h1>
               <p className="text-gray-600 text-base sm:text-lg">
                 Ready to book your next delivery? Let's get started!
