@@ -197,4 +197,5 @@ const Login: React.FC<LoginProps> = ({ onBack, onSwitchToRegister }) => {
   );
 };
 
+
 export default Login;

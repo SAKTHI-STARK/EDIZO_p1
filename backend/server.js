@@ -33,3 +33,10 @@ console.log("DB config:", {
   user: process.env.DB_USER,
   db: process.env.DB_NAME
 });
+process.on("uncaughtException", (err) => {
+  console.error("🔥 Uncaught Exception:", err);
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("🔥 Unhandled Rejection:", reason);
+});

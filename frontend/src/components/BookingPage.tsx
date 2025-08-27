@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { ArrowLeft, MapPin, Package, Truck, Calendar, Clock, CreditCard } from 'lucide-react';
+import { ArrowLeft, MapPin, Package, Truck, CreditCard } from 'lucide-react';
 
+const token = localStorage.getItem("redcap_token");
 interface BookingPageProps {
   onBack: () => void;
   onBookingComplete?: (bookingId: string, bookingData: any) => void;
 }
 
-const BookingPage: React.FC<BookingPageProps> = ({ onBack }) => {
+
+const BookingPage: React.FC<BookingPageProps> = ({ onBack, onBookingComplete }) => {
   const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [bookingData, setBookingData] = useState({
@@ -19,7 +21,6 @@ const BookingPage: React.FC<BookingPageProps> = ({ onBack }) => {
     pickupState: '',
     pickupPincode: '',
     pickupDate: '',
-    pickupTime: '',
     
     // Delivery Details
     deliveryDoorNumber: '',
@@ -28,21 +29,17 @@ const BookingPage: React.FC<BookingPageProps> = ({ onBack }) => {
     deliveryCity: '',
     deliveryState: '',
     deliveryPincode: '',
-    deliveryDate: '',
-    deliveryTime: '',
+   
     
     // Package Details
     packageType: '',
-    weight: '',
-    dimensions: '',
     description: '',
-    value: '',
     
     // Vehicle Type
     vehicleType: '',
     
     // Contact Details
-    senderName: user?.name || '',
+    senderName: user?.fullName || '',
     senderPhone: user?.phone || '',
     receiverName: '',
     receiverPhone: '',
@@ -109,7 +106,7 @@ const BookingPage: React.FC<BookingPageProps> = ({ onBack }) => {
       if (!bookingData.pickupPincode) newErrors.pickupPincode = 'Pickup pincode is required';
       else if (!/^\d{6}$/.test(bookingData.pickupPincode)) newErrors.pickupPincode = 'Invalid pincode';
       if (!bookingData.pickupDate) newErrors.pickupDate = 'Pickup date is required';
-      if (!bookingData.pickupTime) newErrors.pickupTime = 'Pickup time is required';
+
     } else if (step === 2) {
       // Delivery Details Validation
       if (!bookingData.deliveryDoorNumber.trim()) newErrors.deliveryDoorNumber = 'Door number is required';
@@ -121,7 +118,6 @@ const BookingPage: React.FC<BookingPageProps> = ({ onBack }) => {
     } else if (step === 3) {
       // Package Details Validation
       if (!bookingData.packageType) newErrors.packageType = 'Package type is required';
-      if (!bookingData.weight) newErrors.weight = 'Weight is required';
       if (!bookingData.description.trim()) newErrors.description = 'Package description is required';
     } else if (step === 4) {
       // Vehicle Type Validation
@@ -149,16 +145,43 @@ const BookingPage: React.FC<BookingPageProps> = ({ onBack }) => {
   const prevStep = () => {
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
+const handleSubmit = async () => {
+  if (validateStep(5)) {
+    try {
+      
 
-  const handleSubmit = () => {
-    if (validateStep(5)) {
-      // Process booking
-      const bookingId = 'RC' + Date.now().toString().slice(-6);
-      if (onBookingComplete) {
-        onBookingComplete(bookingId, bookingData);
+      // Convert pickupDate into proper datetime format
+      const payload = {
+        ...bookingData,
+        pickupDate: new Date(bookingData.pickupDate).toISOString().slice(0, 19).replace("T", " "),
+      };
+
+      const response = await fetch("http://localhost:8000/api/bookings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+
+      console.log("📦 Booking API response:", result); // debug
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "Booking failed");
       }
+
+      if (onBookingComplete) {
+        onBookingComplete(result.booking.id, result.booking);
+      }
+    } catch (err) {
+      console.error("❌ Booking error:", err);
+      alert("Failed to create booking. Please try again.");
     }
-  };
+  }
+};
 
   const handleCancelBooking = () => {
     if (window.confirm('Are you sure you want to cancel this booking? All entered data will be lost.')) {
@@ -279,20 +302,6 @@ const BookingPage: React.FC<BookingPageProps> = ({ onBack }) => {
                 />
                 {errors.pickupDate && <p className="mt-1 text-sm text-red-600">{errors.pickupDate}</p>}
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Pickup Time *</label>
-                <input
-                  type="time"
-                  name="pickupTime"
-                  value={bookingData.pickupTime}
-                  onChange={handleChange}
-                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all ${
-                    errors.pickupTime ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                  }`}
-                />
-                {errors.pickupTime && <p className="mt-1 text-sm text-red-600">{errors.pickupTime}</p>}
-              </div>
             </div>
           </div>
         );
@@ -393,29 +402,6 @@ const BookingPage: React.FC<BookingPageProps> = ({ onBack }) => {
                 />
                 {errors.deliveryPincode && <p className="mt-1 text-sm text-red-600">{errors.deliveryPincode}</p>}
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Preferred Delivery Date</label>
-                <input
-                  type="date"
-                  name="deliveryDate"
-                  value={bookingData.deliveryDate}
-                  onChange={handleChange}
-                  min={bookingData.pickupDate || new Date().toISOString().split('T')[0]}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Preferred Delivery Time</label>
-                <input
-                  type="time"
-                  name="deliveryTime"
-                  value={bookingData.deliveryTime}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
-                />
-              </div>
             </div>
           </div>
         );
@@ -447,47 +433,11 @@ const BookingPage: React.FC<BookingPageProps> = ({ onBack }) => {
                 {errors.packageType && <p className="mt-1 text-sm text-red-600">{errors.packageType}</p>}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Weight (kg) *</label>
-                <input
-                  type="number"
-                  name="weight"
-                  value={bookingData.weight}
-                  onChange={handleChange}
-                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all ${
-                    errors.weight ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                  }`}
-                  placeholder="Enter weight in kg"
-                  min="0"
-                  step="0.1"
-                />
-                {errors.weight && <p className="mt-1 text-sm text-red-600">{errors.weight}</p>}
-              </div>
+              
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Dimensions (L x W x H cm)</label>
-                <input
-                  type="text"
-                  name="dimensions"
-                  value={bookingData.dimensions}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
-                  placeholder="e.g., 30 x 20 x 15"
-                />
-              </div>
+             
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Declared Value (₹)</label>
-                <input
-                  type="number"
-                  name="value"
-                  value={bookingData.value}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
-                  placeholder="Enter package value"
-                  min="0"
-                />
-              </div>
+             
 
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Package Description *</label>
@@ -641,7 +591,6 @@ const BookingPage: React.FC<BookingPageProps> = ({ onBack }) => {
                     , {bookingData.pickupStreet}
                   </p>
                   <p className="text-sm text-gray-600 mb-1">{bookingData.pickupCity}, {bookingData.pickupState} - {bookingData.pickupPincode}</p>
-                  <p className="text-sm text-gray-600">{bookingData.pickupDate} at {bookingData.pickupTime}</p>
                 </div>
 
                 <div>
@@ -651,17 +600,12 @@ const BookingPage: React.FC<BookingPageProps> = ({ onBack }) => {
                     {bookingData.deliveryBuildingName && `, ${bookingData.deliveryBuildingName}`}
                     , {bookingData.deliveryStreet}
                   </p>
-                  <p className="text-sm text-gray-600 mb-1">{bookingData.deliveryCity}, {bookingData.deliveryState} - {bookingData.deliveryPincode}</p>
-                  {bookingData.deliveryDate && (
-                    <p className="text-sm text-gray-600">Preferred: {bookingData.deliveryDate} at {bookingData.deliveryTime}</p>
-                  )}
+                  
                 </div>
 
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-3">Package Details</h3>
                   <p className="text-sm text-gray-600 mb-1">Type: {bookingData.packageType}</p>
-                  <p className="text-sm text-gray-600 mb-1">Weight: {bookingData.weight} kg</p>
-                  {bookingData.dimensions && <p className="text-sm text-gray-600 mb-1">Dimensions: {bookingData.dimensions} cm</p>}
                   <p className="text-sm text-gray-600">{bookingData.description}</p>
                 </div>
 

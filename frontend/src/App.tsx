@@ -12,14 +12,13 @@ import UserProfile from './components/UserProfile';
 import BookingPage from './components/BookingPage';
 import BookingConfirmation from './components/BookingConfirmation';
 import TrackPackage from './components/TrackPackage';
-import GoogleRegistration from './components/GoogleRegistration';
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, loading } = useAuth();
   const [currentView, setCurrentView] = useState<'home' | 'login' | 'register' | 'dashboard' | 'profile' | 'booking' | 'confirmation' | 'track' | 'google-register'>('home');
   const [bookingData, setBookingData] = useState<any>(null);
   const [bookingId, setBookingId] = useState<string>('');
-  const [googleUserData, setGoogleUserData] = useState<any>(null);
+  
 
   useEffect(() => {
     // Add smooth scrolling CSS
@@ -100,10 +99,6 @@ const AppContent: React.FC = () => {
   };
 
 
-  const handleGoogleRegister = (userData: any) => {
-    setGoogleUserData(userData);
-    setCurrentView('google-register');
-  };
 
   if (currentView === 'login') {
     return (
@@ -119,19 +114,12 @@ const AppContent: React.FC = () => {
       <Register 
         onBack={handleBackToHome}
         onSwitchToLogin={handleSwitchToLogin}
-        onGoogleRegister={handleGoogleRegister}
+  
       />
     );
   }
 
-  if (currentView === 'google-register') {
-    return (
-      <GoogleRegistration 
-        onBack={handleSwitchToLogin}
-        googleUserData={googleUserData}
-      />
-    );
-  }
+
 
   if (currentView === 'dashboard') {
     return (
