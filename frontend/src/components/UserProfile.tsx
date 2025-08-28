@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { User, Mail, Phone, MapPin, Save, ArrowLeft } from 'lucide-react';
+import { User, MapPin, Save, ArrowLeft } from 'lucide-react';
 
 interface UserProfileProps {
   onBack: () => void;
@@ -11,7 +11,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ onBack }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    name: user?.fullName || '',
+    fullName: user?.fullName || '',
     email: user?.email || '',
     phone: user?.phone || '',
     doorNumber: user?.doorNumber || '',
@@ -21,80 +21,73 @@ const UserProfile: React.FC<UserProfileProps> = ({ onBack }) => {
     state: user?.state || '',
     pincode: user?.pincode || ''
   });
-  const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  // Handle browser back button
-  React.useEffect(() => {
-    // Push a new state when component mounts
+  // ✅ Sync when user changes
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        fullName: user.fullName || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        doorNumber: user.doorNumber || '',
+        buildingName: user.buildingName || '',
+        street: user.street || '',
+        city: user.city || '',
+        state: user.state || '',
+        pincode: user.pincode || ''
+      });
+    }
+  }, [user]);
+
+  // ✅ Handle browser back button once
+  useEffect(() => {
     window.history.pushState({ page: 'profile' }, '', '');
-    
     const handlePopState = (event: PopStateEvent) => {
-      // Prevent default browser back behavior
       event.preventDefault();
       onBack();
     };
-
     window.addEventListener('popstate', handlePopState);
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
+    return () => window.removeEventListener('popstate', handlePopState);
   }, [onBack]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    // Clear error when user starts typing
+    setFormData(prev => ({ ...prev, [name]: value }));
     if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
+      setErrors(prev => ({ ...prev, [name]: '' }));
     }
   };
 
   const validateForm = () => {
-    const newErrors: {[key: string]: string} = {};
+    const newErrors: { [key: string]: string } = {};
 
-    if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
-    } else if (formData.name.trim().length < 2) {
-      newErrors.name = 'Name must be at least 2 characters';
+    if (!formData.fullName.trim()) {
+      newErrors.fullName = 'Name is required';
+    } else if (formData.fullName.trim().length < 2) {
+      newErrors.fullName = 'Name must be at least 2 characters';
     }
 
-    if (!formData.email) {
+    if (!formData.email.trim()) {
       newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+    } else if (!/\S+@\S+\.\S+/.test(formData.email.trim())) {
       newErrors.email = 'Please enter a valid email';
     }
 
-    if (!formData.phone) {
+    if (!formData.phone.trim()) {
       newErrors.phone = 'Phone number is required';
-    } else if (!/^[6-9]\d{9}$/.test(formData.phone)) {
+    } else if (!/^[6-9]\d{9}$/.test(formData.phone.trim())) {
       newErrors.phone = 'Please enter a valid 10-digit Indian phone number';
     }
 
-    if (!formData.doorNumber.trim()) {
-      newErrors.doorNumber = 'Door number is required';
-    }
+    if (!formData.doorNumber.trim()) newErrors.doorNumber = 'Door number is required';
+    if (!formData.street.trim()) newErrors.street = 'Street is required';
+    if (!formData.city.trim()) newErrors.city = 'City is required';
+    if (!formData.state.trim()) newErrors.state = 'State is required';
 
-    if (!formData.street.trim()) {
-      newErrors.street = 'Street is required';
-    }
-
-    if (!formData.city.trim()) {
-      newErrors.city = 'City is required';
-    }
-
-    if (!formData.state.trim()) {
-      newErrors.state = 'State is required';
-    }
-
-    if (!formData.pincode) {
+    if (!formData.pincode.trim()) {
       newErrors.pincode = 'Pincode is required';
-    } else if (!/^\d{6}$/.test(formData.pincode)) {
+    } else if (!/^\d{6}$/.test(formData.pincode.trim())) {
       newErrors.pincode = 'Please enter a valid 6-digit pincode';
     }
 
@@ -104,10 +97,9 @@ const UserProfile: React.FC<UserProfileProps> = ({ onBack }) => {
 
   const handleSave = async () => {
     if (!validateForm()) return;
-
     setIsLoading(true);
     try {
-      await updateProfile(formData);
+      await updateProfile(formData); // send updated formData
       setIsEditing(false);
       alert('Profile updated successfully!');
     } catch (error) {
@@ -118,17 +110,19 @@ const UserProfile: React.FC<UserProfileProps> = ({ onBack }) => {
   };
 
   const handleCancel = () => {
-    setFormData({
-      name: user?.fullName || '',
-      email: user?.email || '',
-      phone: user?.phone || '',
-      doorNumber: user?.doorNumber || '',
-      buildingName: user?.buildingName || '',
-      street: user?.street || '',
-      city: user?.city || '',
-      state: user?.state || '',
-      pincode: user?.pincode || ''
-    });
+    if (user) {
+      setFormData({
+        fullName: user.fullName || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        doorNumber: user.doorNumber || '',
+        buildingName: user.buildingName || '',
+        street: user.street || '',
+        city: user.city || '',
+        state: user.state || '',
+        pincode: user.pincode || ''
+      });
+    }
     setErrors({});
     setIsEditing(false);
   };
@@ -156,7 +150,9 @@ const UserProfile: React.FC<UserProfileProps> = ({ onBack }) => {
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold text-white">{user?.fullName}</h1>
-                  <p className="text-red-100">Member since {user?.createdAt ? new Date(user.createdAt).getFullYear() : '2025'}</p>
+                  <p className="text-red-100">
+                    Member since {user?.createdAt ? new Date(user.createdAt).getFullYear() : '2025'}
+                  </p>
                 </div>
               </div>
               {!isEditing ? (
@@ -201,81 +197,71 @@ const UserProfile: React.FC<UserProfileProps> = ({ onBack }) => {
                   Personal Information
                 </h2>
 
+                {/* Full Name */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
                   {isEditing ? (
                     <input
                       type="text"
-                      name="name"
-                      value={formData.name}
+                      name="fullName"
+                      value={formData.fullName}
                       onChange={handleChange}
                       className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all ${
-                        errors.name ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                        errors.fullName ? 'border-red-500 bg-red-50' : 'border-gray-300'
                       }`}
                     />
                   ) : (
                     <p className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">{user?.fullName}</p>
                   )}
-                  {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
+                  {errors.fullName && <p className="mt-1 text-sm text-red-600">{errors.fullName}</p>}
                 </div>
 
+                {/* Email */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
                   {isEditing ? (
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                      <input
-                        type="email"
-                        name="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all ${
-                          errors.email ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                        }`}
-                      />
-                    </div>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      readOnly
+                      placeholder="Email cannot be changed"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed"
+                    />
                   ) : (
-                    <p className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-gray-400" />
-                      {user?.email}
-                    </p>
+                    <p className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">{user?.email}</p>
                   )}
                   {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
                 </div>
 
+                {/* Phone */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
                   {isEditing ? (
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                      <input
-                        type="tel"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleChange}
-                        className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all ${
-                          errors.phone ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                        }`}
-                        maxLength={10}
-                      />
-                    </div>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all ${
+                        errors.phone ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      }`}
+                    />
                   ) : (
-                    <p className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-gray-400" />
-                      {user?.phone}
-                    </p>
+                    <p className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">{user?.phone}</p>
                   )}
                   {errors.phone && <p className="mt-1 text-sm text-red-600">{errors.phone}</p>}
                 </div>
               </div>
 
-              {/* Location Information */}
+              {/* Address Information */}
               <div className="space-y-6">
                 <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
                   <MapPin className="h-5 w-5 text-red-500" />
-                  Location Details
+                  Address Information
                 </h2>
 
+                {/* Door Number */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Door Number</label>
                   {isEditing ? (
@@ -294,6 +280,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ onBack }) => {
                   {errors.doorNumber && <p className="mt-1 text-sm text-red-600">{errors.doorNumber}</p>}
                 </div>
 
+                {/* Building Name */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Building Name</label>
                   {isEditing ? (
@@ -305,10 +292,11 @@ const UserProfile: React.FC<UserProfileProps> = ({ onBack }) => {
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
                     />
                   ) : (
-                    <p className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">{user?.buildingName || 'Not specified'}</p>
+                    <p className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">{user?.buildingName}</p>
                   )}
                 </div>
 
+                {/* Street */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Street</label>
                   {isEditing ? (
@@ -327,7 +315,8 @@ const UserProfile: React.FC<UserProfileProps> = ({ onBack }) => {
                   {errors.street && <p className="mt-1 text-sm text-red-600">{errors.street}</p>}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* City + State */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
                     {isEditing ? (
@@ -365,6 +354,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ onBack }) => {
                   </div>
                 </div>
 
+                {/* Pincode */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Pincode</label>
                   {isEditing ? (
@@ -376,7 +366,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ onBack }) => {
                       className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all ${
                         errors.pincode ? 'border-red-500 bg-red-50' : 'border-gray-300'
                       }`}
-                      maxLength={6}
                     />
                   ) : (
                     <p className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">{user?.pincode}</p>

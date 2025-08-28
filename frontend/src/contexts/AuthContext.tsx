@@ -123,8 +123,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         body: JSON.stringify(userData),
       });
 
-      if (!res.ok) throw new Error("Update failed");
-      const updatedUser = await res.json();
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Update failed");
+      }
+
+      // ✅ Merge old user with new fields (keep email)
+      const updatedUser = {
+        ...authState.user,
+        ...data.user,
+      };
 
       localStorage.setItem("redcap_user", JSON.stringify(updatedUser));
       setAuthState({
@@ -133,7 +141,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loading: false,
       });
     } catch (err) {
+      console.error("❌ Update profile failed:", err);
       setAuthState((prev) => ({ ...prev, loading: false }));
+      throw err;
     }
   };
 
@@ -151,8 +161,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!res.ok) throw new Error("Failed to fetch profile");
       const data = await res.json();
 
-      localStorage.setItem("redcap_user", JSON.stringify(data));
-      setAuthState({ isAuthenticated: true, user: data, loading: false });
+      // ✅ Merge too, in case API omits some fields
+      const mergedUser = {
+        ...authState.user,
+        ...data,
+      };
+
+      localStorage.setItem("redcap_user", JSON.stringify(mergedUser));
+      setAuthState({ isAuthenticated: true, user: mergedUser, loading: false });
     } catch (err) {
       console.error("❌ Fetch profile failed:", err);
     }
