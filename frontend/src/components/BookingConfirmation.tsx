@@ -1,5 +1,15 @@
 import React from 'react';
-import { CheckCircle, MessageCircle, Phone, Mail, ArrowLeft, Package, MapPin, Calendar } from 'lucide-react';
+import { 
+  CheckCircle, 
+  MessageCircle, 
+  Phone, 
+  Mail, 
+  ArrowLeft, 
+  Package, 
+  MapPin, 
+  Calendar, 
+  User 
+} from 'lucide-react';
 
 interface BookingConfirmationProps {
   onBackToDashboard: () => void;
@@ -18,15 +28,11 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
 
   // Handle browser back button
   React.useEffect(() => {
-    // Push a new state when component mounts
     window.history.pushState({ page: 'confirmation' }, '', '');
-    
     const handlePopState = (event: PopStateEvent) => {
-      // Prevent default browser back behavior
       event.preventDefault();
       onBackToDashboard();
     };
-
     window.addEventListener('popstate', handlePopState);
     return () => {
       window.removeEventListener('popstate', handlePopState);
@@ -34,7 +40,7 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
   }, [onBackToDashboard]);
 
   const handleWhatsAppContact = () => {
-    const message = `Hi RedCap Team! I have submitted a booking request with ID: ${bookingId}. Please confirm my booking details and provide further updates.`;
+    const message = `Hi RedCap Team! I have submitted a booking request with Tracking ID: ${bookingId}. Please confirm my booking details and provide further updates.`;
     const whatsappUrl = `https://wa.me/${whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
   };
@@ -60,7 +66,7 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-900">Booking Details</h2>
             <div className="bg-red-100 text-red-800 px-4 py-2 rounded-full font-semibold">
-              ID: {bookingId}
+              Tracking ID: {bookingData?.trackingCode || bookingId}
             </div>
           </div>
 
@@ -71,8 +77,11 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
                 <div>
                   <h3 className="font-semibold text-gray-900">Pickup Location</h3>
                   <p className="text-gray-600 text-sm">
-                    {bookingData?.pickupAddress}<br />
+                    {bookingData?.pickupDoorNumber}, {bookingData?.pickupBuildingName}, {bookingData?.pickupStreet}<br />
                     {bookingData?.pickupCity}, {bookingData?.pickupState} - {bookingData?.pickupPincode}
+                  </p>
+                  <p className="text-gray-600 text-sm mt-1">
+                    Contact: {bookingData?.pickupName} ({bookingData?.pickupPhone})
                   </p>
                 </div>
               </div>
@@ -82,7 +91,7 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
                 <div>
                   <h3 className="font-semibold text-gray-900">Pickup Date & Time</h3>
                   <p className="text-gray-600 text-sm">
-                    {bookingData?.pickupDate} at {bookingData?.pickupTime}
+                    {bookingData?.pickupAt ? new Date(bookingData.pickupAt).toLocaleString() : "Not scheduled"}
                   </p>
                 </div>
               </div>
@@ -94,8 +103,11 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
                 <div>
                   <h3 className="font-semibold text-gray-900">Delivery Location</h3>
                   <p className="text-gray-600 text-sm">
-                    {bookingData?.deliveryAddress}<br />
-                    {bookingData?.deliveryCity}, {bookingData?.deliveryState} - {bookingData?.deliveryPincode}
+                    {bookingData?.dropoffDoorNumber}, {bookingData?.dropoffBuildingName}, {bookingData?.dropoffStreet}<br />
+                    {bookingData?.dropoffCity}, {bookingData?.dropoffState} - {bookingData?.dropoffPincode}
+                  </p>
+                  <p className="text-gray-600 text-sm mt-1">
+                    Contact: {bookingData?.dropoffName} ({bookingData?.dropoffPhone})
                   </p>
                 </div>
               </div>
@@ -105,11 +117,21 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
                 <div>
                   <h3 className="font-semibold text-gray-900">Package Details</h3>
                   <p className="text-gray-600 text-sm">
-                    {bookingData?.packageType} - {bookingData?.weight}kg<br />
-                    {bookingData?.description}
+                    {bookingData?.packageContents}<br />
+                  <br />
+                    {bookingData?.fragile ? "(Fragile)" : ""}
                   </p>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Receiver Info */}
+          <div className="flex items-start gap-3 mb-6">
+            <User className="h-5 w-5 text-purple-500 mt-1 flex-shrink-0" />
+            <div>
+              <h3 className="font-semibold text-gray-900">Receiver Name</h3>
+              <p className="text-gray-600 text-sm">{bookingData?.dropoffName}</p>
             </div>
           </div>
 
@@ -134,7 +156,7 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
             Get Quick Confirmation via WhatsApp
           </h2>
           <p className="text-gray-600 text-center mb-6">
-            For faster confirmation and updates, contact our team directly on WhatsApp
+            For faster confirmation and updates, contact our team directly
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -161,52 +183,6 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({
               <Mail className="h-5 w-5" />
               Email Support
             </a>
-          </div>
-        </div>
-
-        {/* Next Steps */}
-        <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 mb-8 border border-red-100">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">What Happens Next?</h2>
-          <div className="space-y-4">
-            <div className="flex items-start gap-4">
-              <div className="w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0">
-                1
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900">Team Review</h3>
-                <p className="text-gray-600 text-sm">Our logistics team will review your booking request and verify all details.</p>
-              </div>
-            </div>
-            
-            <div className="flex items-start gap-4">
-              <div className="w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0">
-                2
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900">Confirmation Call</h3>
-                <p className="text-gray-600 text-sm">We'll contact you within 2-4 hours to confirm details and provide final pricing.</p>
-              </div>
-            </div>
-            
-            <div className="flex items-start gap-4">
-              <div className="w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0">
-                3
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900">Vehicle Assignment</h3>
-                <p className="text-gray-600 text-sm">Once confirmed, we'll assign the best vehicle and driver for your delivery.</p>
-              </div>
-            </div>
-            
-            <div className="flex items-start gap-4">
-              <div className="w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0">
-                4
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900">Real-time Tracking</h3>
-                <p className="text-gray-600 text-sm">Track your package in real-time through our dashboard once pickup begins.</p>
-              </div>
-            </div>
           </div>
         </div>
 
