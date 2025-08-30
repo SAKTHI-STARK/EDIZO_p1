@@ -14,6 +14,7 @@ import BookingConfirmation from "./components/BookingConfirmation";
 import TrackPackage from "./components/TrackPackage";
 import RecentBookings from "./components/RecentBookings";
 import ResetPassword from "./components/ResetPassword";
+import ForgetPassword from "./components/ForgetPassword";
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, loading } = useAuth();
@@ -28,18 +29,19 @@ const AppContent: React.FC = () => {
     | "track"
     | "recent-bookings"
     | "reset-password"
+    | "forgot-password"
   >("home");
 
   const [bookingData, setBookingData] = useState<any>(null);
   const [bookingId, setBookingId] = useState<string>("");
 
-  // smooth scrolling CSS
+  // Smooth scrolling CSS
   useEffect(() => {
     document.documentElement.style.scrollPaddingTop = "5rem";
     document.documentElement.style.scrollBehavior = "smooth";
   }, []);
 
-  // auth-based redirect
+  // Auth-based redirect
   useEffect(() => {
     if (isAuthenticated && ["home", "login", "register"].includes(currentView)) {
       setCurrentView("dashboard");
@@ -52,7 +54,7 @@ const AppContent: React.FC = () => {
     }
   }, [isAuthenticated, currentView]);
 
-  // browser back/forward support
+  // Browser back/forward support
   useEffect(() => {
     if (!loading) {
       window.history.pushState({ view: currentView }, "", "");
@@ -82,7 +84,7 @@ const AppContent: React.FC = () => {
     );
   }
 
-  // handlers
+  // Handlers
   const handleLoginClick = () => setCurrentView("login");
   const handleRegisterClick = () => setCurrentView("register");
   const handleBackToHome = () => setCurrentView("home");
@@ -101,9 +103,9 @@ const AppContent: React.FC = () => {
     handleBookingComplete(bookingId, bookingData);
   const handleTrackPackage = () => setCurrentView("track");
   const handleRecentBookings = () => setCurrentView("recent-bookings");
-  const handleResetPassword = () => setCurrentView("reset-password");
+  const handleForgotPassword = () => setCurrentView("forgot-password");
 
-  // views
+  // Views
   if (currentView === "recent-bookings") {
     return (
       <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 to-red-50 text-gray-800">
@@ -114,12 +116,16 @@ const AppContent: React.FC = () => {
     );
   }
 
+  if (currentView === "forgot-password") {
+    return <ForgetPassword />;
+  }
+
   if (currentView === "login") {
     return (
       <Login
         onBack={handleBackToHome}
         onSwitchToRegister={handleSwitchToRegister}
-        onForgotPassword={handleResetPassword}
+        onForgotPassword={handleForgotPassword}
       />
     );
   }
@@ -198,7 +204,7 @@ const AppContent: React.FC = () => {
     );
   }
 
-  // home
+  // Home
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 to-red-50 text-gray-800">
       <Header

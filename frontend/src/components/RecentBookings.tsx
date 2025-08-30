@@ -74,7 +74,6 @@ const getStatusConfig = (status: string) => {
 
 interface Props {
   onBack: () => void;
-  onStartBooking: () => void;
 }
 
 const RecentBookings: React.FC<Props> = ({ onBack}) => {

@@ -205,10 +205,8 @@ const UserProfile: React.FC<UserProfileProps> = ({ onBack }) => {
                       type="text"
                       name="fullName"
                       value={formData.fullName}
-                      onChange={handleChange}
-                      className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all ${
-                        errors.fullName ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                      }`}
+                      readOnly
+                       className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed"
                     />
                   ) : (
                     <p className="text-gray-900 bg-gray-50 px-4 py-3 rounded-lg">{user?.fullName}</p>
