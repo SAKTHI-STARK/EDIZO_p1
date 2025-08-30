@@ -1,55 +1,145 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Truck, Package, MapPin, Clock, Star, Mail, Phone } from 'lucide-react';
-
+import { Truck, Package, MapPin, Clock, Mail, Phone } from 'lucide-react';
+import axios from 'axios';
 interface UserDashboardProps {
   onStartBooking: () => void;
   onTrackPackage: () => void;
+  onViewAllBookings: () => void;
 }
 
-const UserDashboard: React.FC<UserDashboardProps> = ({ onStartBooking, onTrackPackage }) => {
+/** Shape from your /api/bookings rows */
+interface DBBooking {
+  id?: number;
+  userId?: number;
+  trackingCode: string;
+  status: string;
+
+  pickupName?: string;
+  pickupPhone?: string;
+  pickupDoorNumber?: string;
+  pickupBuildingName?: string;
+  pickupStreet?: string;
+  pickupCity?: string;
+  pickupState?: string;
+  pickupPincode?: string;
+
+  dropoffName?: string;
+  dropoffPhone?: string;
+  dropoffDoorNumber?: string;
+  dropoffBuildingName?: string;
+  dropoffStreet?: string;
+  dropoffCity?: string;
+  dropoffState?: string;
+  dropoffPincode?: string;
+
+  packageContents?: string;
+  packageType?: string;
+  vehicleType?: string;
+  pickupAt?: string | null;
+  createdAt?: string | null;
+
+  
+}
+
+const API_BASE_URL = 'http://localhost:8000/api';
+
+const formatCityState = (city?: string | null, state?: string | null) => {
+  const c = (city || '').trim();
+  const s = (state || '').trim();
+  if (c && s) return `${c}, ${s}`;
+  return c || s || '—';
+};
+
+const formatDate = (iso?: string | null) => {
+  if (!iso) return '—';
+  // expect "YYYY-MM-DD..." from DB
+  return iso.slice(0, 10);
+};
+
+const UserDashboard: React.FC<UserDashboardProps> = ({ onStartBooking, onTrackPackage, onViewAllBookings  }) => {
   const { user } = useAuth();
 
-  const stats = [
-    { icon: <Package className="h-6 w-6" />, label: 'Total Bookings', value: '12', color: 'text-blue-600' },
-    { icon: <Truck className="h-6 w-6" />, label: 'Active Deliveries', value: '2', color: 'text-green-600' },
-    { icon: <Clock className="h-6 w-6" />, label: 'Pending Orders', value: '1', color: 'text-orange-600' },
-    { icon: <Star className="h-6 w-6" />, label: 'Rating', value: '4.8', color: 'text-yellow-600' },
-  ];
+  const [bookings, setBookings] = useState<DBBooking[]>([]);
 
-  const recentBookings = [
-    {
-      id: '1',
-      from: 'Mumbai, MH',
-      to: 'Pune, MH',
-      date: '2025-01-09',
-      status: 'Delivered',
-      amount: '₹2,500'
-    },
-    {
-      id: '2',
-      from: 'Delhi, DL',
-      to: 'Gurgaon, HR',
-      date: '2025-01-08',
-      status: 'In Transit',
-      amount: '₹1,800'
-    },
-    {
-      id: '3',
-      from: 'Bangalore, KA',
-      to: 'Chennai, TN',
-      date: '2025-01-07',
-      status: 'Pending',
-      amount: '₹3,200'
+  // fetch bookings (and refresh every 10s)
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchBookings = async () => {
+      try {
+        const token = localStorage.getItem('redcap_token');
+        const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+        const res = await axios.get(`${API_BASE_URL}/bookings`, { headers });
+        if (!cancelled) {
+          const rows: DBBooking[] = res.data?.bookings ?? res.data ?? [];
+          setBookings(Array.isArray(rows) ? rows : []);
+        }
+      } catch (err) {
+        console.error('Error fetching bookings:', err);
+      }
+    };
+
+    if (user) {
+      fetchBookings();
+      const t = setInterval(fetchBookings, 10000);
+      return () => {
+        cancelled = true;
+        clearInterval(t);
+      };
     }
-  ];
+  }, [user?.id]);
+
+  // derive stats
+  const totalBookings = bookings.length;
+  const activeDeliveries = bookings.filter(b =>
+    ['In Transit', 'Out for Delivery', 'Accepted', 'Assigned'].includes((b.status || '').trim())
+  ).length;
+  const pendingOrders = bookings.filter(b => (b.status || '').trim() === 'Pending').length;
+
+  // keep same UI structure for stats
+  const stats = useMemo(
+    () => [
+      { icon: <Package className="h-6 w-6" />, label: 'Total Bookings', value: String(totalBookings), color: 'text-blue-600' },
+      { icon: <Truck className="h-6 w-6" />, label: 'Active Deliveries', value: String(activeDeliveries), color: 'text-green-600' },
+      { icon: <Clock className="h-6 w-6" />, label: 'Pending Orders', value: String(pendingOrders), color: 'text-orange-600' },
+    ],
+    [totalBookings, activeDeliveries, pendingOrders]
+  );
+
+  // Keep the same UI shape for recentBookings, just map from DB
+  const recentBookings = useMemo(() => {
+    return bookings
+      .slice()
+      .sort((a, b) => {
+        const da = new Date(a.createdAt || a.pickupAt || 0).getTime();
+        const db = new Date(b.createdAt || b.pickupAt || 0).getTime();
+        return db - da;
+      })
+      .slice(0, 3)
+      .map(b => ({
+        id: String(b.id ?? b.trackingCode),
+        from: formatCityState(b.pickupCity, b.pickupState),
+        to: formatCityState(b.dropoffCity, b.dropoffState),
+        date: formatDate(b.pickupAt || b.createdAt || undefined),
+        status: b.status || 'Pending',
+       
+      }));
+  }, [bookings]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Delivered': return 'text-green-600 bg-green-100';
-      case 'In Transit': return 'text-blue-600 bg-blue-100';
-      case 'Pending': return 'text-orange-600 bg-orange-100';
-      default: return 'text-gray-600 bg-gray-100';
+      case 'Delivered':
+        return 'text-green-600 bg-green-100';
+      case 'In Transit':
+      case 'Out for Delivery':
+        return 'text-blue-600 bg-blue-100';
+      case 'Pending':
+      case 'Accepted':
+      case 'Assigned':
+        return 'text-orange-600 bg-orange-100';
+      default:
+        return 'text-gray-600 bg-gray-100';
     }
   };
 
@@ -61,7 +151,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onStartBooking, onTrackPa
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-                Welcome back, {user?.fullName}! 👋
+                Welcome back, {user?.fullName || 'User'}! 👋
               </h1>
               <p className="text-gray-600 text-base sm:text-lg">
                 Ready to book your next delivery? Let's get started!
@@ -78,28 +168,37 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onStartBooking, onTrackPa
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
-          {stats.map((stat, index) => (
-            <div key={index} className="bg-white rounded-xl shadow-lg p-6 border border-red-100 hover:shadow-xl transition-shadow duration-300">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-600 text-sm font-medium">{stat.label}</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
-                </div>
-                <div className={`${stat.color} bg-red-50 p-3 rounded-lg`}>
-                  {stat.icon}
-                </div>
-              </div>
-            </div>
-          ))}
+       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
+  {stats.map((stat, index) => (
+    <div
+      key={index}
+      className="bg-white rounded-xl shadow-lg p-6 border border-red-100 hover:shadow-xl transition-shadow duration-300"
+    >
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-gray-600 text-sm font-medium">{stat.label}</p>
+          <p className="text-2xl font-bold text-gray-900 mt-1">{stat.value}</p>
         </div>
+        <div className={`${stat.color} bg-red-50 p-3 rounded-lg`}>{stat.icon}</div>
+      </div>
+    </div>
+  ))}
+</div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
           {/* Recent Bookings */}
           <div className="lg:col-span-2 bg-white rounded-2xl shadow-xl p-6 sm:p-8 border border-red-100">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Recent Bookings</h2>
-              <button className="text-red-500 hover:text-red-600 font-medium">View All</button>
+              
+
+<button
+  onClick={onViewAllBookings}   // 👈 use the prop here
+  className="text-red-500 hover:text-red-600 font-medium"
+>
+  View All
+</button>
+
             </div>
             <div className="space-y-4">
               {recentBookings.map((booking) => (
@@ -108,7 +207,9 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onStartBooking, onTrackPa
                     <div className="flex items-center gap-3">
                       <MapPin className="h-5 w-5 text-red-500 flex-shrink-0" />
                       <div>
-                        <p className="font-semibold text-gray-900">{booking.from} → {booking.to}</p>
+                        <p className="font-semibold text-gray-900">
+                          {booking.from} → {booking.to}
+                        </p>
                         <p className="text-sm text-gray-600">{booking.date}</p>
                       </div>
                     </div>
@@ -116,11 +217,13 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onStartBooking, onTrackPa
                       <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(booking.status)}`}>
                         {booking.status}
                       </span>
-                      <span className="font-bold text-gray-900">{booking.amount}</span>
                     </div>
                   </div>
                 </div>
               ))}
+              {recentBookings.length === 0 && (
+                <p className="text-gray-600 text-sm">No recent bookings found.</p>
+              )}
             </div>
           </div>
 
@@ -142,33 +245,6 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onStartBooking, onTrackPa
                 <Truck className="h-5 w-5" />
                 New Booking
               </button>
-            </div>
-
-            {/* Navigation Links */}
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Links</h3>
-              <div className="space-y-2">
-                <a
-                  href="#about"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                  className="block text-red-600 hover:text-red-700 font-medium"
-                >
-                  About RedCap
-                </a>
-                <a
-                  href="#contact"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                  className="block text-red-600 hover:text-red-700 font-medium"
-                >
-                  Contact Support
-                </a>
-              </div>
             </div>
           </div>
         </div>
@@ -233,7 +309,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onStartBooking, onTrackPa
             <p className="text-center text-gray-700 mb-8 sm:mb-12 max-w-2xl mx-auto text-base sm:text-lg px-4">
               We're here to help! Reach out with any questions, feedback, or support inquiries.
             </p>
-            
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 max-w-5xl mx-auto">
               {/* Contact Form */}
               <div className="bg-white shadow-xl rounded-2xl p-6 sm:p-8 border border-red-100">
@@ -291,9 +367,9 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onStartBooking, onTrackPa
                       <span>123, Vehicle Booking Hub, Namakkal, Tamil Nadu</span>
                     </div>
                   </div>
-                  
+
                   <hr className="my-4 sm:my-6 border-red-400" />
-                  
+
                   <div>
                     <h4 className="font-semibold mb-2 text-base sm:text-lg">FAQ</h4>
                     <p className="text-red-100 text-sm sm:text-base">
@@ -305,6 +381,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ onStartBooking, onTrackPa
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );

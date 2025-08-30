@@ -5,16 +5,15 @@ import { Mail, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 interface LoginProps {
   onBack: () => void;
   onSwitchToRegister: () => void;
+  onForgotPassword: () => void;
 }
 
-const Login: React.FC<LoginProps> = ({ onBack, onSwitchToRegister }) => {
-  const { login, isAuthenticated } = useAuth();
+const Login: React.FC<LoginProps> = ({ onBack, onSwitchToRegister, onForgotPassword }) => {
+  const { login, isAuthenticated, loading, error, clearError } = useAuth();
 
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const [isLoading, setIsLoading] = useState(false);
-  const [serverError, setServerError] = useState<string | null>(null);
 
   // 🔙 Handle browser back button
   useEffect(() => {
@@ -30,7 +29,7 @@ const Login: React.FC<LoginProps> = ({ onBack, onSwitchToRegister }) => {
   // ✅ Redirect if already logged in
   useEffect(() => {
     if (isAuthenticated) {
-      onBack(); // go back to dashboard/home
+      onBack();
     }
   }, [isAuthenticated, onBack]);
 
@@ -40,7 +39,7 @@ const Login: React.FC<LoginProps> = ({ onBack, onSwitchToRegister }) => {
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
-    setServerError(null);
+    if (error) clearError();
   };
 
   const validateForm = () => {
@@ -63,20 +62,10 @@ const Login: React.FC<LoginProps> = ({ onBack, onSwitchToRegister }) => {
     e.preventDefault();
     if (!validateForm()) return;
 
-    setIsLoading(true);
-    setServerError(null);
-
     try {
       await login(formData.email, formData.password);
-    } catch (error: any) {
-      console.error('❌ Login error:', error);
-      setServerError(
-        error?.message ||
-        error?.detail ||
-        'Login failed. Please check your credentials.'
-      );
-    } finally {
-      setIsLoading(false);
+    } catch {
+      // error already comes from context
     }
   };
 
@@ -154,21 +143,25 @@ const Login: React.FC<LoginProps> = ({ onBack, onSwitchToRegister }) => {
 
             {/* Forgot Password */}
             <div className="text-right">
-              <button type="button" className="text-sm text-red-600 hover:text-red-700 font-medium">
-                Forgot your password?
+              <button
+                type="button"
+                onClick={onForgotPassword}
+                className="text-sm text-red-500 hover:underline"
+              >
+                Forgot Password?
               </button>
             </div>
 
             {/* Server Error */}
-            {serverError && <p className="text-red-600 text-center text-sm">{serverError}</p>}
+            {error && <p className="text-red-600 text-center text-sm">{error}</p>}
 
             {/* Submit */}
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={loading}
               className="w-full bg-red-500 text-white py-3 px-4 rounded-lg font-semibold hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? (
+              {loading ? (
                 <div className="flex items-center justify-center gap-2">
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                   Signing in...
@@ -196,6 +189,5 @@ const Login: React.FC<LoginProps> = ({ onBack, onSwitchToRegister }) => {
     </div>
   );
 };
-
 
 export default Login;

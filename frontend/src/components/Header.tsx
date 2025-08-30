@@ -78,7 +78,7 @@ const Header: React.FC<HeaderProps> = ({ onLoginClick, onRegisterClick, onProfil
                 className="flex items-center gap-2 border-2 border-white text-white px-3 py-1 lg:px-4 lg:py-1 rounded-full hover:text-red-600 hover:bg-white transition-all duration-200 text-sm lg:text-base"
               >
                 <User className="h-4 w-4" />
-                {user?.name}
+                {user?.fullName}
               </button>
               
               {isProfileMenuOpen && (
@@ -177,7 +177,7 @@ const Header: React.FC<HeaderProps> = ({ onLoginClick, onRegisterClick, onProfil
           {isAuthenticated ? (
             <>
               <div className="border-t border-red-400 pt-4 mt-4">
-                <p className="text-red-100 text-sm mb-2">Welcome, {user?.name}!</p>
+                <p className="text-red-100 text-sm mb-2">Welcome, {user?.fullName}!</p>
                 <button 
                   onClick={() => {
                     onProfileClick?.();

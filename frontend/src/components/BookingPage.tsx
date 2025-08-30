@@ -618,10 +618,6 @@ const handleSubmit = async () => {
               </div>
 
               <div className="mt-6 pt-6 border-t border-gray-300">
-                <div className="flex justify-between items-center">
-                  <span className="text-lg font-semibold text-gray-900">Estimated Cost:</span>
-                  <span className="text-2xl font-bold text-red-600">₹1,250</span>
-                </div>
                 <p className="text-sm text-gray-600 mt-1">*Final cost may vary based on actual distance and additional services</p>
               </div>
             </div>
