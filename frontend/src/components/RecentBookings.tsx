@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { MapPin, ArrowLeft } from "lucide-react";
+import { ArrowLeft, Package, Truck, User, DollarSign } from "lucide-react";
 import axios from "axios";
 import { useAuth } from "../contexts/AuthContext";
 import About from "./About";
@@ -38,25 +38,46 @@ const formatDate = (iso?: string | null) => {
   });
 };
 
-const getStatusColor = (status: string) => {
+const getStatusConfig = (status: string) => {
   switch (status) {
     case "Delivered":
-      return "bg-green-100 text-green-800";
+      return {
+        bg: "bg-emerald-50",
+        text: "text-emerald-700",
+        border: "border-emerald-200",
+        dot: "bg-emerald-500"
+      };
     case "Pending":
-      return "bg-yellow-100 text-yellow-800";
+      return {
+        bg: "bg-amber-50",
+        text: "text-amber-700",
+        border: "border-amber-200",
+        dot: "bg-amber-500"
+      };
     case "In Transit":
     case "Shipped":
-      return "bg-blue-100 text-blue-700";
+      return {
+        bg: "bg-blue-50",
+        text: "text-blue-700",
+        border: "border-blue-200",
+        dot: "bg-blue-500"
+      };
     default:
-      return "bg-gray-100 text-gray-700";
+      return {
+        bg: "bg-gray-50",
+        text: "text-gray-700",
+        border: "border-gray-200",
+        dot: "bg-gray-500"
+      };
   }
 };
 
 interface Props {
   onBack: () => void;
+  onStartBooking: () => void;
 }
 
-const RecentBookings: React.FC<Props> = ({ onBack }) => {
+const RecentBookings: React.FC<Props> = ({ onBack}) => {
   const { user } = useAuth();
   const [bookings, setBookings] = useState<DBBooking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,131 +102,179 @@ const RecentBookings: React.FC<Props> = ({ onBack }) => {
     } else {
       setLoading(false);
     }
-  }, [user]);
+  }, [user]); // Can be [] if you want to only fetch on initial render
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-red-50 to-white text-gray-800 flex flex-col">
-      {/* Back Button */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 text-red-600 hover:text-red-700 font-medium"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Dashboard
-        </button>
-      </div>
+    <div className="min-h-screen" style={{ backgroundColor: "#fee9e9" }}>
 
-      {/* Header Card */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
-        <div className="bg-white shadow-md rounded-2xl p-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">My Bookings</h1>
-            <p className="mt-2 text-gray-600">
-              Track the status of your shipments and manage recent deliveries.
-            </p>
+      {/* Header Bar */}
+      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <button
+              onClick={onBack}
+              className="flex items-center gap-2 text-gray-600 hover:text-red-600 font-medium transition-colors duration-200 group"
+            >
+              <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform duration-200" />
+              Back to Dashboard
+            </button>
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <Package className="h-4 w-4" />
+              {bookings.length} {bookings.length === 1 ? 'Booking' : 'Bookings'}
+            </div>
           </div>
         </div>
       </div>
 
+      {/* Page Header */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-6">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-gray-900 mb-3">
+            My Bookings
+          </h1>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            Track your packages and manage deliveries with real-time updates
+          </p>
+        </div>
+      </div>
+
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="flex flex-col items-center gap-4">
-              <div className="w-12 h-12 border-4 border-red-500 border-t-transparent rounded-full animate-spin"></div>
-              <p className="text-gray-600 font-medium">Loading your bookings...</p>
+          <div className="flex items-center justify-center py-16">
+            <div className="text-center">
+              <div className="relative">
+                <div className="w-16 h-16 border-4 border-red-100 rounded-full"></div>
+                <div className="w-16 h-16 border-4 border-red-500 border-t-transparent rounded-full animate-spin absolute top-0 left-0"></div>
+              </div>
+              <p className="text-gray-600 font-medium mt-4">Loading your shipments...</p>
+              <p className="text-gray-400 text-sm mt-1">Please wait while we fetch your data</p>
             </div>
           </div>
         ) : bookings.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {bookings.map((b) => (
-              <div
-                key={b.id ?? b.trackingCode}
-                className="border border-gray-200 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden"
-              >
-                <div className="p-6">
-                  <div className="flex items-start gap-3">
-                    <MapPin className="h-5 w-5 text-red-500 mt-1 flex-shrink-0" />
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900 text-base leading-tight">
-                        {formatCityState(b.pickupCity, b.pickupState)} →{" "}
-                        {formatCityState(b.dropoffCity, b.dropoffState)}
-                      </h3>
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            {bookings.map((booking) => {
+              const statusConfig = getStatusConfig(booking.status);
 
-                      <dl className="mt-3 space-y-2 text-sm text-gray-600">
-                        <div>
-                          <dt className="font-medium">Date:</dt>
-                          <dd>{formatDate(b.pickupAt || b.createdAt)}</dd>
+              return (
+                <div
+                  key={booking.trackingCode} // Use trackingCode as key
+                  className="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-gray-200 transition-all duration-300 overflow-hidden group"
+                >
+                  {/* Card Header */}
+                  <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-100">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-red-100 rounded-lg">
+                          <Package className="h-5 w-5 text-red-600" />
                         </div>
-
                         <div>
-                          <dt className="font-medium">Tracking ID:</dt>
-                          <dd>
-                            <code className="font-mono bg-gray-100 px-1.5 py-0.5 rounded text-xs text-gray-700">
-                              {b.trackingCode}
-                            </code>
-                          </dd>
+                          <h3 className="font-semibold text-gray-900 text-lg">
+                            Shipment #{booking.trackingCode}
+                          </h3>
+                          <p className="text-sm text-gray-500">
+                            {formatDate(booking.pickupAt || booking.createdAt)}
+                          </p>
                         </div>
+                      </div>
+                      <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border ${statusConfig.bg} ${statusConfig.text} ${statusConfig.border}`}>
+                        <div className={`w-2 h-2 rounded-full ${statusConfig.dot}`}></div>
+                        <span className="text-xs font-semibold">{booking.status}</span>
+                      </div>
+                    </div>
+                  </div>
 
-                        <div>
-                          <dt className="font-medium">Status:</dt>
-                          <dd>
-                            <span
-                              className={`inline-flex text-xs font-semibold px-2.5 py-0.5 rounded-full ${getStatusColor(
-                                b.status
-                              )}`}
-                            >
-                              {b.status}
-                            </span>
-                          </dd>
+                  {/* Card Content */}
+                  <div className="p-6 space-y-4">
+                    {/* Route */}
+                    <div className="space-y-3">
+                      <div className="flex items-start gap-3">
+                        <div className="flex flex-col items-center mt-1">
+                          <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                          <div className="w-px h-8 bg-gray-300"></div>
+                          <div className="w-3 h-3 rounded-full bg-red-500"></div>
                         </div>
-
-                        {b.price && (
+                        <div className="flex-1 space-y-3">
                           <div>
-                            <dt className="font-medium">Price:</dt>
-                            <dd>${b.price.toFixed(2)}</dd>
+                            <p className="text-sm font-medium text-gray-500">From</p>
+                            <p className="text-base font-semibold text-gray-900">
+                              {formatCityState(booking.pickupCity, booking.pickupState)}
+                            </p>
                           </div>
-                        )}
-
-                        {b.vehicleType && (
                           <div>
-                            <dt className="font-medium">Vehicle:</dt>
-                            <dd>{b.vehicleType}</dd>
+                            <p className="text-sm font-medium text-gray-500">To</p>
+                            <p className="text-base font-semibold text-gray-900">
+                              {formatCityState(booking.dropoffCity, booking.dropoffState)}
+                            </p>
                           </div>
-                        )}
+                        </div>
+                      </div>
+                    </div>
 
-                        {b.receiverName && (
+                    {/* Details Grid */}
+                    <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100">
+                      {booking.price && (
+                        <div className="flex items-center gap-2">
+                          <DollarSign className="h-4 w-4 text-gray-400" />
                           <div>
-                            <dt className="font-medium">Receiver:</dt>
-                            <dd>{b.receiverName}</dd>
+                            <p className="text-xs text-gray-500 font-medium">Price</p>
+                            <p className="text-sm font-semibold text-gray-900">${booking.price.toFixed(2)}</p>
                           </div>
-                        )}
-                      </dl>
+                        </div>
+                      )}
+
+                      {booking.vehicleType && (
+                        <div className="flex items-center gap-2">
+                          <Truck className="h-4 w-4 text-gray-400" />
+                          <div>
+                            <p className="text-xs text-gray-500 font-medium">Vehicle</p>
+                            <p className="text-sm font-semibold text-gray-900">{booking.vehicleType}</p>
+                          </div>
+                        </div>
+                      )}
+
+                      {booking.receiverName && (
+                        <div className="flex items-center gap-2 col-span-2">
+                          <User className="h-4 w-4 text-gray-400" />
+                          <div>
+                            <p className="text-xs text-gray-500 font-medium">Receiver</p>
+                            <p className="text-sm font-semibold text-gray-900">{booking.receiverName}</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
-                <div className="h-1 bg-gradient-to-r from-red-100 to-transparent"></div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
-          <div className="text-center py-12">
-            <MapPin className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-700">No bookings yet</h3>
-            <p className="text-gray-500 mt-2">
-              You haven't made any bookings. Start by creating a new shipment.
-            </p>
+          <div className="text-center py-16">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 max-w-md mx-auto">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Package className="h-8 w-8 text-gray-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">No shipments found</h3>
+              <p className="text-gray-500 mb-6">
+                You haven't created any shipments yet. Start by booking your first delivery.
+              </p>
+            </div>
           </div>
         )}
       </main>
 
-      {/* Extra Sections */}
-      <section className="mt-16">
-        <About />
+      {/* About Section */}
+      <section className="border-t border-gray-200" style={{ backgroundColor: "#fee9e9" }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <About />
+        </div>
       </section>
-      <section className="mt-16">
-        <Contact />
+
+      {/* Contact Section */}
+      <section className="border-t border-gray-200" style={{ backgroundColor: "#fee9e9" }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <Contact />
+        </div>
       </section>
     </div>
   );

@@ -1,3 +1,4 @@
+// Update your imports for best practice
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { User, AuthState } from "../types/user";
 
@@ -45,7 +46,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     if (res.status === 401) {
-      logout();
+      logout();  // Log the user out if session expired
       throw new Error("Session expired. Please log in again.");
     }
 
