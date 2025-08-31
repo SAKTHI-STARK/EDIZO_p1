@@ -1,9 +1,6 @@
 import React, { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { ArrowLeft, Mail } from "lucide-react";
-import axios from "axios";
-
-const API_BASE_URL = "http://localhost:8000/api"; // Ensure the URL is correct
 
 const ForgetPassword: React.FC = () => {
   const { forgotPassword, clearError } = useAuth();
@@ -11,43 +8,18 @@ const ForgetPassword: React.FC = () => {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Function to check if email exists in the backend
-  const checkEmailExists = async (email: string) => {
-    try {
-      const response = await axios.post(`${API_BASE_URL}/forgot-password`, { email });
-      // Check if the response data indicates success
-      if (response.data.success) {
-        return true; // Email exists
-      } else {
-        return false; // Email doesn't exist
-      }
-    } catch (err) {
-      console.error("Error checking email:", err);
-      return false; // Treat errors as email not found
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     clearError();
-    setMessage(""); // Clear previous messages
+    setMessage("");
     setLoading(true);
 
-    // Check if the email exists in the database
-    const doesExist = await checkEmailExists(email);
-    if (!doesExist) {
-      setMessage("❌ This email is not registered.");
-      setLoading(false);
-      return; // Stop the process if the email doesn't exist
-    }
-
     try {
-      // Attempt to send the reset password link
+      // Single API call
       await forgotPassword(email);
       setMessage("✅ Password reset link has been sent to your email.");
     } catch (err: any) {
-      // Handle any errors during the process
-      setMessage(err?.message || "❌ Something went wrong.");
+      setMessage(err?.message || "❌ This email is not registered.");
     } finally {
       setLoading(false);
     }
@@ -58,7 +30,7 @@ const ForgetPassword: React.FC = () => {
       <div className="max-w-md w-full">
         {/* Back button */}
         <button
-          onClick={() => window.history.back()} // Go back to previous page
+          onClick={() => window.history.back()}
           className="flex items-center gap-2 text-red-600 hover:text-red-700 mb-6 transition-colors"
         >
           <ArrowLeft className="h-5 w-5" />
